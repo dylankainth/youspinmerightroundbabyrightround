@@ -1,20 +1,24 @@
-"""Renders a point cloud as a 4-quadrant hologram (front/back/left/right)."""
+"""Renders a point cloud as a 4-view hologram prism with center focal point."""
 
 import numpy as np
 import cv2
 
-QUAD_W = 640
-QUAD_H = 480
-CANVAS_W = QUAD_W * 2
-CANVAS_H = QUAD_H * 2
+# Screen layout: 4 views surrounding a center point
+# Top: Front,  Bottom: Back,  Left: Left,  Right: Right
+SCREEN_W = 1280
+SCREEN_H = 960
+VIEW_W = 320
+VIEW_H = 240
+CENTER_X = SCREEN_W // 2
+CENTER_Y = SCREEN_H // 2
 
-# View definitions: (axis_a, axis_b, label)
-# Project onto different planes for different views
+# View definitions: (axis_a, axis_b, label, x_offset, y_offset)
+# Positioned around center like a prism
 _VIEWS = [
-    (0, 1, "front"),    # X-Y plane (front view)
-    (0, 1, "back"),     # X-Y plane (back view) 
-    (1, 2, "left"),     # Y-Z plane (left view)
-    (0, 2, "right"),    # X-Z plane (right view)
+    (0, 1, "front",  CENTER_X - VIEW_W // 2, CENTER_Y - VIEW_H - 20),      # Top
+    (0, 1, "back",   CENTER_X - VIEW_W // 2, CENTER_Y + 20),               # Bottom
+    (1, 2, "left",   CENTER_X - VIEW_W - 20, CENTER_Y - VIEW_H // 2),      # Left
+    (0, 2, "right",  CENTER_X + 20,          CENTER_Y - VIEW_H // 2),      # Right
 ]
 
 # Scale for normalizing coordinates
@@ -37,11 +41,11 @@ def _project_points(pcd, axis_a: int, axis_b: int) -> tuple[np.ndarray, np.ndarr
     # Assume points are roughly in -2..2 meters range
     normalized = (proj / SCALE + 1.0) * 0.5  # Map to 0..1
     
-    # Convert to pixel coordinates
-    pixels = (normalized * np.array([QUAD_W, QUAD_H])).astype(np.int32)
+    # Convert to pixel coordinates (scaled to view size)
+    pixels = (normalized * np.array([VIEW_W, VIEW_H])).astype(np.int32)
     
     # Clamp to image bounds
-    pixels = np.clip(pixels, 0, [QUAD_W - 1, QUAD_H - 1])
+    pixels = np.clip(pixels, 0, [VIEW_W - 1, VIEW_H - 1])
     
     # Color by Z height (use third axis not projected)
     z_axis = 2 if axis_a != 2 and axis_b != 2 else (0 if axis_a != 0 else 1)
@@ -60,30 +64,39 @@ def _project_points(pcd, axis_a: int, axis_b: int) -> tuple[np.ndarray, np.ndarr
 
 def render_hologram(pcd) -> np.ndarray:
     """
-    Returns a (CANVAS_H, CANVAS_W, 3) uint8 BGR image.
-    Four views arranged in a 2x2 grid on black background.
+    Returns a (SCREEN_H, SCREEN_W, 3) uint8 BGR image with 4 views around center prism.
     """
-    canvas = np.zeros((CANVAS_H, CANVAS_W, 3), dtype=np.uint8)
+    canvas = np.zeros((SCREEN_H, SCREEN_W, 3), dtype=np.uint8)
     
     try:
         pts = np.asarray(pcd.points)
         if pts.shape[0] == 0:
             return canvas
         
-        quad_positions = [(0, 0), (QUAD_W, 0), (0, QUAD_H), (QUAD_W, QUAD_H)]
-        
-        for (axis_a, axis_b, _label), (ox, oy) in zip(_VIEWS, quad_positions):
+        for axis_a, axis_b, label, x_pos, y_pos in _VIEWS:
             # Project points for this view
             pixels, colors = _project_points(pcd, axis_a, axis_b)
             
-            # Draw onto this quad
+            # Draw onto this view's region
             if pixels.shape[0] > 0:
-                valid = (pixels[:, 0] >= 0) & (pixels[:, 0] < QUAD_W) & \
-                        (pixels[:, 1] >= 0) & (pixels[:, 1] < QUAD_H)
+                valid = (pixels[:, 0] >= 0) & (pixels[:, 0] < VIEW_W) & \
+                        (pixels[:, 1] >= 0) & (pixels[:, 1] < VIEW_H)
                 for i in np.where(valid)[0]:
-                    x, y = pixels[i]
+                    px, py = pixels[i]
                     b, g, r = colors[i]
-                    canvas[oy + y, ox + x] = [b, g, r]
+                    canvas[y_pos + py, x_pos + px] = [b, g, r]
+            
+            # Draw view border
+            cv2.rectangle(canvas, (x_pos, y_pos), (x_pos + VIEW_W, y_pos + VIEW_H), (100, 100, 100), 1)
+            # Draw label
+            cv2.putText(canvas, label, (x_pos + 5, y_pos + 20),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, (100, 100, 100), 1)
+        
+        # Draw center prism indicator
+        prism_size = 30
+        cv2.circle(canvas, (CENTER_X, CENTER_Y), prism_size, (255, 100, 100), 2)
+        cv2.line(canvas, (CENTER_X - prism_size, CENTER_Y), (CENTER_X + prism_size, CENTER_Y), (255, 100, 100), 1)
+        cv2.line(canvas, (CENTER_X, CENTER_Y - prism_size), (CENTER_X, CENTER_Y + prism_size), (255, 100, 100), 1)
     
     except Exception as e:
         print(f"[renderer] error: {e}")
@@ -92,19 +105,12 @@ def render_hologram(pcd) -> np.ndarray:
 
 
 def draw_grid(canvas: np.ndarray) -> np.ndarray:
-    """Draws cross-hair dividers and labels on the hologram canvas."""
+    """Draws crosshairs at the center prism indicator."""
     out = canvas.copy()
     h, w = out.shape[:2]
-    mid_x, mid_y = w // 2, h // 2
-    cyan = (255, 255, 0)
-    cv2.line(out, (mid_x, 0), (mid_x, h), cyan, 1)
-    cv2.line(out, (0, mid_y), (w, mid_y), cyan, 1)
     
-    labels = ["front", "back", "left", "right"]
-    positions = [(0, 0), (mid_x, 0), (0, mid_y), (mid_x, mid_y)]
-    
-    for label, (ox, oy) in zip(labels, positions):
-        cv2.putText(out, label, (ox + 8, oy + 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, cyan, 1, cv2.LINE_AA)
+    # Draw center crosshairs
+    cv2.line(out, (CENTER_X, 0), (CENTER_X, h), (50, 50, 50), 1)
+    cv2.line(out, (0, CENTER_Y), (w, CENTER_Y), (50, 50, 50), 1)
     
     return out
