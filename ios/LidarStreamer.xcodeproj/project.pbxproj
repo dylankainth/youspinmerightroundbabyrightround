@@ -7,11 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D3B6822BDFFF0B20BB102983 /* UDPStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BD995B603ACF09D27F5E60 /* UDPStreamer.swift */; };
 		DBCB27927ECAAAA970CEBBF1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80F05B3CDCA07FF3000CDAE /* AppDelegate.swift */; };
 		FE01BEF4AFAC9B0BA6AFF1DC /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B8C069246E8A722B6C4588 /* ViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		56BD995B603ACF09D27F5E60 /* UDPStreamer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDPStreamer.swift; sourceTree = "<group>"; };
 		AD489743B38D9C89F7C4FB57 /* LidarStreamer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LidarStreamer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2B8C069246E8A722B6C4588 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		F072D50CD9A7614A9FF06B27 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -24,6 +26,7 @@
 			children = (
 				F80F05B3CDCA07FF3000CDAE /* AppDelegate.swift */,
 				F072D50CD9A7614A9FF06B27 /* Info.plist */,
+				56BD995B603ACF09D27F5E60 /* UDPStreamer.swift */,
 				D2B8C069246E8A722B6C4588 /* ViewController.swift */,
 			);
 			path = LidarStreamer;
@@ -104,6 +107,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DBCB27927ECAAAA970CEBBF1 /* AppDelegate.swift in Sources */,
+				D3B6822BDFFF0B20BB102983 /* UDPStreamer.swift in Sources */,
 				FE01BEF4AFAC9B0BA6AFF1DC /* ViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
