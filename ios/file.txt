@@ -1,0 +1,23 @@
+Paste this exact prompt to get it going:
+I have a blank Xcode iOS app called LidarStreamer. I need you to build 
+a Swift app that:
+
+1. Uses ARKit with ARWorldTrackingConfiguration and .sceneDepth to 
+   access iPhone LiDAR depth frames
+
+2. Uses CMDeviceMotion to read yaw angle at 50Hz
+
+3. On every 6th AR frame (~10fps), bundles:
+   - Downsampled depth map (256x192 → 64x48, Float32)
+   - Current yaw (Double)
+   - Frame timestamp (Double)
+   into a binary UDP packet
+
+4. Sends the packet via UDP to a configurable IP:port 
+   (default 192.168.1.XX:9000)
+
+5. Has a minimal UI showing: connection status, FPS counter, 
+   current yaw value
+
+The main files to edit are ViewController.swift and Info.plist.
+USB streaming via CFSocket is preferred over WiFi for lower latency.
