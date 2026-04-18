@@ -18,6 +18,8 @@ final class UDPStreamer {
     private let outputWidth: UInt16 = 64
     private let outputHeight: UInt16 = 48
 
+    deinit { stop() }
+
     // MARK: - Lifecycle
 
     func start(host: String, port: UInt16) {

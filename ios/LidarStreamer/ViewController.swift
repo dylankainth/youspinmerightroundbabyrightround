@@ -226,8 +226,8 @@ class ViewController: UIViewController {
         let elapsed = last - first
         guard elapsed > 0 else { return }
         let fps = Double(sendTimestamps.count - 1) / elapsed
-        DispatchQueue.main.async {
-            self.fpsLabel.text = String(format: "TX: %.1f fps", fps)
+        DispatchQueue.main.async { [weak self] in
+            self?.fpsLabel.text = String(format: "TX: %.1f fps", fps)
         }
     }
 
@@ -270,8 +270,8 @@ extension ViewController: ARSessionDelegate {
         recordSendAndUpdateFPS()
 
         let yawDeg = yaw * 180.0 / .pi
-        DispatchQueue.main.async {
-            self.yawLabel.text = String(format: "Yaw: %.2f rad (%.1f°)", yaw, yawDeg)
+        DispatchQueue.main.async { [weak self] in
+            self?.yawLabel.text = String(format: "Yaw: %.2f rad (%.1f°)", yaw, yawDeg)
         }
     }
 
