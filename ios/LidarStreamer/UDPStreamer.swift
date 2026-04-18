@@ -1,4 +1,5 @@
 import Foundation
+import Network
 
 enum StreamerState: Equatable {
     case idle
@@ -47,6 +48,69 @@ final class UDPStreamer {
             fd = -1
         }
         setState(.idle)
+    }
+
+    // MARK: - Bonjour
+
+    private var browser: NWBrowser?
+    var onBonjourDiscovered: ((_ host: String, _ port: UInt16) -> Void)?
+
+    func startBrowsing() {
+        let descriptor = NWBrowser.Descriptor.bonjour(type: "_lidarstream._udp.", domain: nil)
+        let browser = NWBrowser(for: descriptor, using: .udp)
+
+        browser.stateUpdateHandler = { state in
+            if case .failed(let err) = state {
+                print("[Bonjour] browse failed: \(err)")
+            }
+        }
+
+        browser.browseResultsChangedHandler = { [weak self] results, _ in
+            guard let result = results.first else { return }
+            if case .service(let name, let type, let domain, _) = result.endpoint {
+                self?.resolveService(name: name, type: type, domain: domain)
+            }
+        }
+
+        browser.start(queue: .main)
+        self.browser = browser
+    }
+
+    func stopBrowsing() {
+        browser?.cancel()
+        browser = nil
+    }
+
+    private func resolveService(name: String, type: String, domain: String) {
+        let endpoint = NWEndpoint.service(name: name, type: type, domain: domain, interface: nil)
+        let params = NWParameters.udp
+        let connection = NWConnection(to: endpoint, using: params)
+
+        connection.stateUpdateHandler = { [weak self] state in
+            if case .ready = state {
+                if let innerEndpoint = connection.currentPath?.remoteEndpoint,
+                   case .hostPort(let host, let port) = innerEndpoint {
+                    let hostStr: String
+                    switch host {
+                    case .ipv4(let addr):
+                        hostStr = "\(addr)"
+                    case .ipv6(let addr):
+                        hostStr = "\(addr)"
+                    case .name(let name, _):
+                        hostStr = name
+                    @unknown default:
+                        hostStr = "\(host)"
+                    }
+                    let portNum = port.rawValue
+                    DispatchQueue.main.async {
+                        self?.onBonjourDiscovered?(hostStr, portNum)
+                    }
+                }
+                connection.cancel()
+            }
+        }
+
+        connection.start(queue: .global(qos: .utility))
     }
 
     // MARK: - Send
