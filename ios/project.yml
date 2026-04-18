@@ -1,0 +1,27 @@
+name: LidarStreamer
+options:
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+targets:
+  LidarStreamer:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: LidarStreamer
+    settings:
+      INFOPLIST_FILE: LidarStreamer/Info.plist
+      PRODUCT_BUNDLE_IDENTIFIER: com.starkhacks.lidarstreamer
+      DEVELOPMENT_TEAM: ""
+      SWIFT_VERSION: "5.0"
+      TARGETED_DEVICE_FAMILY: "1"
+    dependencies: []
+schemes:
+  LidarStreamer:
+    build:
+      targets:
+        LidarStreamer: all
+    run:
+      config: Debug
+    archive:
+      config: Release
